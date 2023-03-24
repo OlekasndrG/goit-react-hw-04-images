@@ -26,15 +26,16 @@ export default function HookAPP() {
   const [showMoreBTn, setShowMoreBTn] = useState(false);
   const [activeImg, setActiveImg] = useState([]);
   // const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(STATUS.IDLE);
 
-  const innerFetch =  (querySearch, page) => {
+  const innerFetch = (querySearch, page) => {
     if (querySearch === '') {
       return;
     }
     setStatus(STATUS.PENDING);
-     FetchAPI(querySearch, page)
+    FetchAPI(querySearch, page)
       .then(results => {
         setPicturesArray(prev => [...prev, ...results.hits]);
         setStatus(STATUS.RESOLVED);
@@ -79,7 +80,7 @@ export default function HookAPP() {
     // }
 
     innerFetch(querySearch, page);
-  }, [page, querySearch]);
+  }, [ page, querySearch]);
 
   const handleSearchSubmit = querySearch => {
     setQuerySearch(querySearch);
@@ -128,4 +129,3 @@ export default function HookAPP() {
     </MainContainer>
   );
 }
-
