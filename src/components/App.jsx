@@ -1,14 +1,15 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 
-import Modal from './Utils/Modal/Modal';
+import { ModalHook } from './Utils/Modal/Modal';
 
-import Searchbar from './Searchbar/Searchbar';
+// import Searchbar from './Searchbar/Searchbar';
 import ImageGallery from './ImageGallery/ImageGallery';
 import { FetchAPI } from './Utils/Fetch/API';
 import Loader from './Loader/Loader';
 import { LoadMoreBtn, MainContainer } from './App.styled';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { SearchBarHook } from './Searchbar/Searchbar';
 
 const STATUS = {
   IDLE: 'idle',
@@ -16,130 +17,115 @@ const STATUS = {
   REJECTED: 'rejected',
   RESOLVED: 'resolved',
 };
+export default function HookAPP() {
+  // const isFirstRender = useRef(true);
+  const [querySearch, setQuerySearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [showModal, setShowModal] = useState(false);
+  const [picturesArray, setPicturesArray] = useState([]);
+  const [showMoreBTn, setShowMoreBTn] = useState(false);
+  const [activeImg, setActiveImg] = useState([]);
+  // const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [status, setStatus] = useState(STATUS.IDLE);
 
-export class App extends Component {
-  state = {
-    showModal: false,
-    querySearch: '',
-    page: 1,
-    picturesArray: [],
-    showMoreBTn: false,
-    activeImg: {},
-    status: STATUS.IDLE,
-    loading: false,
-    error: '',
-  };
+  const innerFetch =  (querySearch, page) => {
+    if (querySearch === '') {
+      return;
+    }
+    setStatus(STATUS.PENDING);
+     FetchAPI(querySearch, page)
+      .then(results => {
+        setPicturesArray(prev => [...prev, ...results.hits]);
+        setStatus(STATUS.RESOLVED);
 
-  async componentDidUpdate(prevProps, prevState) {
-    if (
-      this.state.querySearch !== prevState.querySearch ||
-      this.state.page !== prevState.page
-    ) {
-      this.setState({ status: STATUS.PENDING });
-      FetchAPI(this.state.querySearch, this.state.page).then(results => {
-        this.setState(prevState => ({
-          picturesArray: [...prevState.picturesArray, ...results.hits],
-          status: STATUS.IDLE,
-        }));
+        if (results.totalHits > 12) {
+          setShowMoreBTn(true);
+        } else {
+          setShowMoreBTn(false);
+        }
         if (results.hits.length === 0) {
-          this.setState({ status: STATUS.IDLE, showMoreBTn: false });
-          toast.error(`We didnt find results for ${this.state.querySearch}`, {
+          setStatus(STATUS.REJECTED);
+          setShowMoreBTn(false);
+          toast.error(`We didnt find results for ${querySearch}`, {
             position: 'top-center',
             autoClose: 2000,
             hideProgressBar: false,
             closeOnClick: true,
-            pauseOnHover: true,
             draggable: true,
             progress: undefined,
             theme: 'dark',
           });
         }
-        if (results.totalHits > 12) {
-          this.setState({ showMoreBTn: true });
-        } else {
-          this.setState({ showMoreBTn: false });
-        }
-      });
-      // .catch(error => {
-      //   console.log(error);
-      //   return this.setState({
-      //     error: error.message,
-      //     status: STATUS.REJECTED,
-      //   });
-      // });
-    }
-  }
-
-  handleSearchSubmit = querySearch => {
-    if (this.state.querySearch === querySearch) {
-      return;
-    }
-    this.setState({ querySearch, page: 1, picturesArray: [] });
-  };
-  handleLoadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
-  };
-  toggleModal = () => {
-    this.setState(prevState => ({
-      showModal: !prevState.showModal,
-    }));
-  };
-  openBigImage = currentUrl => {
-    this.setState({
-      activeImg: this.state.picturesArray.find(
-        img => img.largeImageURL === currentUrl
-      ),
-      showModal: true,
-    });
+      })
+      .catch(error => setError(error));
   };
 
-  render() {
-    const { showModal, activeImg, status, showMoreBTn, picturesArray } =
-      this.state;
-    return (
-      <MainContainer>
-        <Searchbar onSubmit={this.handleSearchSubmit} />
+  // useEffect(() => {
+  //   if (hasMounted) {
+  //     innerFetch(querySearch, page);
+  //   } else {
+  //     setHasMounted(true);
+  //   }
+  // }, [querySearch, page, hasMounted]);
 
-        {status === STATUS.PENDING && <Loader />}
+  useEffect(() => {
+    // if (isFirstRender.current) {
+    //   isFirstRender.current = false;
+    //   return;
+    // }
+    // if (querySearch === '') {
+    //   return;
+    // }
 
-        {showModal && (
-          <Modal onClose={this.toggleModal}>
-            <img
-              width="60%"
-              src={activeImg.largeImageURL}
-              alt={activeImg.tags}
-            />
-          </Modal>
-        )}
-        <ImageGallery
-          picturesArray={picturesArray}
-          openBigImage={this.openBigImage}
-          // toggleModal={this.toggleModal}
-        />
+    innerFetch(querySearch, page);
+  }, [page, querySearch]);
 
-        {/* {status === STATUS.REJECTED && <p>{error}</p>} */}
-        {showMoreBTn && (
-          <LoadMoreBtn type="button" onClick={this.handleLoadMore}>
-            Load More
-          </LoadMoreBtn>
-        )}
-        <ToastContainer
-          position="top-center"
-          autoClose={2000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="dark"
-        />
-      </MainContainer>
-    );
-  }
+  const handleSearchSubmit = querySearch => {
+    setQuerySearch(querySearch);
+    setPage(1);
+    setPicturesArray([]);
+  };
+  const handleLoadMore = () => {
+    setPage(prev => prev + 1);
+  };
+  const toggleModal = () => {
+    setShowModal(false);
+  };
+  const openBigImage = currentUrl => {
+    setActiveImg(picturesArray.find(img => img.largeImageURL === currentUrl));
+    setShowModal(true);
+  };
+
+  return (
+    <MainContainer>
+      <SearchBarHook onSubmit={handleSearchSubmit} />
+      {/* {status === STATUS.REJECTED &&
+       } */}
+      {status === STATUS.PENDING && <Loader />}
+
+      <ImageGallery picturesArray={picturesArray} openBigImage={openBigImage} />
+      {status !== STATUS.PENDING && showMoreBTn && (
+        <LoadMoreBtn type="button" onClick={handleLoadMore}>
+          Load More
+        </LoadMoreBtn>
+      )}
+      {showModal && (
+        <ModalHook onClose={toggleModal}>
+          <img width="60%" src={activeImg.largeImageURL} alt={activeImg.tags} />
+        </ModalHook>
+      )}
+      <ToastContainer
+        position="top-center"
+        autoClose={2000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        draggable
+        theme="dark"
+      />
+    </MainContainer>
+  );
 }
 
-export default App;

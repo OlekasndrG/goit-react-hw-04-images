@@ -9,9 +9,7 @@ const ImageGalleryItem = ({
   webformatURL,
   tags,
   id,
-  toggleModal,
   openBigImage,
-  largeImageURL,
 }) => {
   return (
     <ImageGalleryItemContainer key={id}>
